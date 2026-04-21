@@ -11,7 +11,7 @@ export async function signInWithGoogle() {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-  redirectTo: window.location.origin,
+  redirectTo: 'https://jtsuc123.github.io/dis-service-hrs/',
 },
   });
   if (error) throw error;
