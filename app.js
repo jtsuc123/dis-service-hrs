@@ -42,20 +42,23 @@ window.handleSignOut = async () => {
 };
 
 supabase.auth.onAuthStateChange(async (event, session) => {
+  console.log('auth event:', event, 'session:', !!session);
   if (event === 'SIGNED_OUT' || !session) {
     document.body.classList.add('hide-sidebar');
     show('pgLogin');
     return;
   }
-  if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+  if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') {
     await init();
   }
 });
 
 async function init() {
+  console.log('init called');
   show('pgLoad');
   try {
     const r = await getUserRole();
+    console.log('role:', r.role, 'email:', r.email);
     S.role = r.role; S.email = r.email; S.displayName = r.displayName ?? '';
     setUserChip(r.displayName, r.email);
     el('signOutBtn').style.display = 'flex';
@@ -86,6 +89,7 @@ async function init() {
       await loadStudent(r.email);
     }
   } catch (e) {
+    console.error('init error:', e);
     toast('Error: ' + e.message, 'err');
     show('pgLogin');
   }
