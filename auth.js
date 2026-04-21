@@ -30,12 +30,17 @@ export async function getUser() {
 
 // Determine role from email + config
 export async function getUserRole() {
-  const user = await getUser();
+  console.log('getUserRole start');
+    const user = await getUser();
+  console.log('user:', user?.email);
   if (!user) return { role: 'unauthenticated', email: '', displayName: '' };
 
   const email = user.email?.toLowerCase().trim() ?? '';
   const displayName = user.user_metadata?.full_name ?? '';
   const domain = email.split('@')[1] ?? '';
+
+
+  console.log('domain:', domain, 'email:', email);
 
   if (domain !== SCHOOL_DOMAIN) {
     return { role: 'no_access', email, displayName };
@@ -43,6 +48,7 @@ export async function getUserRole() {
 
   // Check super admins
   const superAdmins = await getConfig('super_admins', []);
+  console.log('superAdmins:', superAdmins);
   if (superAdmins.map(e => e.toLowerCase()).includes(email)) {
     return { role: 'super_admin', email, displayName };
   }
