@@ -11,11 +11,8 @@ export async function signInWithGoogle() {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin,
-      queryParams: {
-        hd: SCHOOL_DOMAIN, // hint Google to show school accounts
-      },
-    },
+  redirectTo: window.location.origin,
+},
   });
   if (error) throw error;
 }
