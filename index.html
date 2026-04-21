@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>DIS Service Hours</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ════ SIDEBAR ════ -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon-wrap" id="brandIcon">SH</div>
+    <div>
+      <div class="brand-text">Service Hours</div>
+      <div class="brand-sub">Dominican International School</div>
+    </div>
+  </div>
+  <div class="sidebar-sy"><strong id="sbSY">Loading…</strong>Active School Year</div>
+  <nav class="sidebar-nav" id="sideNav" style="flex:1;padding:8px 0"></nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-av" id="sbAv">?</div>
+      <div style="flex:1;min-width:0">
+        <div class="sidebar-uname" id="sbEmail"></div>
+        <div id="sbRoleLabel" class="sidebar-uemail"></div>
+      </div>
+    </div>
+    <div class="sidebar-sync" id="sbSync"></div>
+    <div id="viewAsWrap" style="display:none">
+      <div class="va-section">
+        <div class="va-label">View As Student</div>
+        <div style="position:relative">
+          <input class="va-input" type="text" id="vaSearch" placeholder="Search by name or email…" oninput="vaSearchDebounce()" autocomplete="off"/>
+          <div class="va-results" id="vaResults"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MAIN ════ -->
+<div class="main" id="mainWrap">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-title" id="topTitle">Dashboard</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="user-chip" id="userChip" style="display:none">
+        <div class="user-chip-av" id="userChipAv"></div>
+        <div class="user-chip-name" id="userChipName"></div>
+      </div>
+      <button class="btn btn-s btn-sm" id="signOutBtn" onclick="handleSignOut()" style="display:none">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- LOADING -->
+  <div class="page show" id="pgLoad"><div class="loading"><div class="spin"></div>Loading…</div></div>
+
+  <!-- LOGIN -->
+  <div class="page" id="pgLogin">
+    <div class="loading">
+      <div style="text-align:center;max-width:340px">
+        <div style="font-size:34px;margin-bottom:14px">📋</div>
+        <div style="font-size:22px;font-weight:700;margin-bottom:6px">DIS Service Hours</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:24px">Sign in with your school Google account</div>
+        <button class="btn btn-p" style="width:100%;height:42px;font-size:13px;justify-content:center;gap:10px" onclick="handleSignIn()">
+          <img src="https://www.google.com/favicon.ico" style="width:16px;height:16px"/> Sign in with Google
+        </button>
+        <div style="font-size:11px;color:var(--text3);margin-top:12px">@dishs.tp.edu.tw accounts only</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NO ACCESS -->
+  <div class="page" id="pgNo">
+    <div class="loading">
+      <div style="font-size:34px">🔒</div>
+      <div style="font-size:19px;margin-bottom:7px;margin-top:10px;color:var(--text)">Access Denied</div>
+      <div style="font-size:12px;color:var(--text2);text-align:center;max-width:320px;line-height:1.6">Your email <strong id="naEmail" style="font-family:monospace"></strong> is not authorized.<br>Contact a super-admin to be added.</div>
+      <button class="btn btn-s" style="margin-top:16px" onclick="handleSignOut()">Sign out</button>
+    </div>
+  </div>
+
+  <!-- STUDENT PAGE -->
+  <div class="page" id="pgStudent">
+    <div id="vaBar" class="view-as-bar" style="display:none">
+      <span>👁 Viewing as: <strong id="vaBarName"></strong></span>
+      <button onclick="exitViewAs()">← Back</button>
+    </div>
+    <div class="page-inner">
+      <div class="profile-hero">
+        <div class="profile-left">
+          <div class="profile-av" id="pAv"></div>
+          <div>
+            <div class="profile-name" id="pName">Good morning!</div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:6px" id="pSubname"></div>
+            <div class="profile-tags" id="pTags"></div>
+          </div>
+        </div>
+        <div class="profile-hrs-block">
+          <div class="profile-big" id="pCurHrs">0</div>
+          <div class="profile-big-label">hours this year</div>
+          <div class="profile-cumul" id="pCumul">0 hrs</div>
+          <div class="profile-cumul-label">cumulative total</div>
+        </div>
+      </div>
+      <div class="charts-grid" id="sCharts" style="display:none">
+        <div class="card" style="margin-bottom:0"><div class="card-h"><span class="card-title">Hours by Organization</span></div><div class="card-b"><div class="chart-wrap"><canvas id="cSOrg"></canvas></div></div></div>
+        <div class="card" style="margin-bottom:0"><div class="card-h"><span class="card-title">History by School Year</span></div><div class="card-b"><div class="sy-hist" id="sHistBars"></div></div></div>
+      </div>
+      <div class="org-list" id="sOrgs" style="margin-top:14px"></div>
+    </div>
+  </div>
+
+  <!-- TEACHER PAGE -->
+  <div class="page" id="pgTeacher">
+    <div class="page-inner">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+        <div>
+          <div class="page-title" id="tOrgName">Organization</div>
+          <div class="page-sub" id="tMeta" style="margin-bottom:0"></div>
+        </div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:flex-start;margin-top:4px">
+          <select class="filter-select" id="tOrgSel" onchange="loadTeacher(this.value)" style="display:none;width:210px"></select>
+          <button class="btn btn-s" onclick="openModal('mAddStu')">+ Add Student</button>
+          <button class="btn btn-p" onclick="openModal('mAddSess')">+ Add Session</button>
+          <button class="btn btn-p" onclick="openModal('mAddMisc')">+ Give Misc Hours</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><span class="card-title">Students</span><span id="tCnt" class="card-sub"></span></div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th>Grade</th><th>Last Name</th><th>First Name</th><th>Role</th><th>Total Hrs</th><th>Attendance %</th><th></th></tr></thead>
+            <tbody id="tTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN PAGE -->
+  <div class="page" id="pgAdmin">
+    <!-- DASHBOARD -->
+    <div id="viewDash" class="page-inner">
+      <div style="margin-bottom:20px">
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub" id="dashSub">Overview of service hours this school year</div>
+      </div>
+      <div class="stats-row" id="adminStats"></div>
+      <div class="charts-grid">
+        <div class="card" style="margin-bottom:0"><div class="card-h"><span class="card-title">Hours by Organization</span></div><div class="card-b"><div class="chart-wrap"><canvas id="cOrg"></canvas></div></div></div>
+        <div class="card" style="margin-bottom:0"><div class="card-h"><span class="card-title">Average Hours by Grade</span></div><div class="card-b"><div class="chart-wrap"><canvas id="cGrade"></canvas></div></div></div>
+      </div>
+      <div class="charts-grid" style="margin-top:12px">
+        <div class="card" style="margin-bottom:0"><div class="card-h"><span class="card-title">Monthly Sessions</span></div><div class="card-b"><div class="chart-wrap"><canvas id="cMonth"></canvas></div></div></div>
+        <div class="card" style="margin-bottom:0"><div class="card-h"><span class="card-title">Top 10 Students This Year</span></div><div class="card-b"><div class="chart-wrap"><canvas id="cTop"></canvas></div></div></div>
+      </div>
+    </div>
+
+    <!-- HOURS OVERVIEW -->
+    <div id="viewStudents" style="display:none" class="page-inner">
+      <div style="margin-bottom:18px"><div class="page-title">Hours Overview</div></div>
+      <div class="search-bar-wrap"><span class="search-bar-icon">🔍</span><input class="search-bar-input" id="srch" placeholder="Search by name, ID, or email…" oninput="renderAdminTbl()"/></div>
+      <div class="filter-row">
+        <select class="filter-select" id="fGr" onchange="renderAdminTbl()"><option value="">All Grades</option><option>G9RL</option><option>G9RP</option><option>G10A</option><option>G10P</option><option>G11A</option><option>G11L</option><option>G12V</option><option>G12P</option></select>
+        <select class="filter-select" id="fHse" onchange="renderAdminTbl()"><option value="">All Houses</option><option>1-Truthful</option><option>2-Organized</option><option>3-Reflective</option><option>4-Courageous</option><option>5-Helpful</option></select>
+      </div>
+      <div class="card"><div class="tbl-wrap"><table class="tbl"><thead><tr>
+        <th class="sortable" onclick="sortAdminTbl('name')">Name <span id="srt-name"></span></th>
+        <th>ID</th><th class="sortable" onclick="sortAdminTbl('class')">Class <span id="srt-class"></span></th>
+        <th>House</th><th>Email</th>
+        <th class="sortable" onclick="sortAdminTbl('hrs')">This Year <span id="srt-hrs"></span></th>
+        <th class="sortable" onclick="sortAdminTbl('cumul')">Cumulative <span id="srt-cumul"></span></th>
+      </tr></thead><tbody id="adminTbody"></tbody></table></div></div>
+    </div>
+
+    <!-- ROSTER -->
+    <div id="viewRoster" style="display:none" class="page-inner">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+        <div><div class="page-title">Master Roster</div></div>
+        <div style="display:flex;gap:6px;margin-top:4px">
+          <button class="btn btn-s" onclick="openModal('mBulk')">Bulk Import</button>
+          <button class="btn btn-p" onclick="openModal('mNewStu')">+ Add Student</button>
+        </div>
+      </div>
+      <div class="search-bar-wrap"><span class="search-bar-icon">🔍</span><input class="search-bar-input" id="rSrch" placeholder="Search roster…" oninput="renderRoster()"/></div>
+      <div class="filter-row">
+        <select class="filter-select" id="rStatus" onchange="renderRoster()"><option value="">All Status</option><option>Active</option><option>Inactive</option></select>
+        <select class="filter-select" id="rGr" onchange="renderRoster()"><option value="">All Grades</option><option>G9RL</option><option>G9RP</option><option>G10A</option><option>G10P</option><option>G11A</option><option>G11L</option><option>G12V</option><option>G12P</option></select>
+        <select class="filter-select" id="rHse" onchange="renderRoster()"><option value="">All Houses</option><option>1-Truthful</option><option>2-Organized</option><option>3-Reflective</option><option>4-Courageous</option><option>5-Helpful</option></select>
+      </div>
+      <div class="card"><div class="tbl-wrap"><table class="tbl"><thead><tr>
+        <th>ID</th><th>Last Name</th><th>First Name</th><th>Class</th><th>House</th><th>Email</th><th>This Year</th><th>Cumulative</th><th>Status</th><th></th>
+      </tr></thead><tbody id="rTbody"></tbody></table></div></div>
+    </div>
+
+    <!-- ORGS -->
+    <div id="viewOrgs" style="display:none" class="page-inner">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+        <div><div class="page-title">Organizations</div></div>
+        <div style="margin-top:4px"><button class="btn btn-p" onclick="openModal('mNewOrg')">+ New Organization</button></div>
+      </div>
+      <div id="orgGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:11px"></div>
+    </div>
+
+    <!-- FLAGS -->
+    <div id="viewFlags" style="display:none" class="page-inner">
+      <div style="margin-bottom:18px"><div class="page-title">Flags</div></div>
+      <div id="flagsList"></div>
+    </div>
+
+    <!-- OFF-CAMPUS -->
+    <div id="viewOC" style="display:none" class="page-inner">
+      <div style="margin-bottom:18px"><div class="page-title">Off-Campus Submissions</div></div>
+      <div id="ocList"></div>
+    </div>
+
+    <!-- MISC ADMIN -->
+    <div id="viewMiscAdmin" style="display:none" class="page-inner">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+        <div><div class="page-title">Misc Hours</div></div>
+        <div style="margin-top:4px"><button class="btn btn-p" onclick="openModal('mAddMisc')">+ Give Hours</button></div>
+      </div>
+      <div class="search-bar-wrap"><span class="search-bar-icon">🔍</span><input class="search-bar-input" id="miscSrch" placeholder="Search…" oninput="renderMiscAdmin()"/></div>
+      <div class="card"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date</th><th>Teacher</th><th>Student</th><th>Task</th><th>Description</th><th>Hours</th><th></th></tr></thead><tbody id="miscAdminTbody"></tbody></table></div></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="viewSettings" style="display:none" class="page-inner">
+      <div style="margin-bottom:22px"><div class="page-title">Settings</div></div>
+      <div style="max-width:660px">
+        <div class="sett-sec">
+          <div class="sett-title">School Year</div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <span style="font-size:13px">Active: <strong id="activeSYLbl"></strong></span>
+            <button class="btn btn-w" onclick="openModal('mNewSY')">Start New School Year…</button>
+          </div>
+        </div>
+        <div class="sett-sec">
+          <div class="sett-title">Super Admins <button class="btn btn-s btn-sm" onclick="addSA()">+ Add</button></div>
+          <div class="email-list" id="saList"></div>
+        </div>
+        <div class="sett-sec">
+          <div class="sett-title">Teacher Access <button class="btn btn-p btn-sm" onclick="openModal('mAddTeacher')" style="margin-left:8px">+ Add Teacher</button></div>
+          <div id="oeBlocks"></div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /pgAdmin -->
+</div><!-- /main -->
+
+<!-- Detail Panel -->
+<div class="dp-bg" id="dpBg" onclick="closeDP()"></div>
+<div class="dp" id="dp">
+  <div class="dp-hd"><button class="dp-x" onclick="closeDP()">✕</button><div class="dp-name" id="dpName"></div><div class="dp-meta" id="dpMeta"></div></div>
+  <div class="dp-b" id="dpBody"></div>
+</div>
+
+<!-- ════ MODALS ════ -->
+<div class="modal-bg" id="mFlag"><div class="modal">
+  <div class="modal-h"><span class="modal-title">Flag an Issue</span><button class="modal-x" onclick="closeModal('mFlag')">✕</button></div>
+  <div class="modal-b">
+    <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:var(--r-sm);padding:10px 12px;font-size:12px;color:var(--amber);margin-bottom:13px" id="flagCtx"></div>
+    <div class="fg"><label class="fl">Describe the issue</label><textarea class="fi fi-ta" id="flagTxt"></textarea></div>
+  </div>
+  <div class="modal-f"><button class="btn btn-s" onclick="closeModal('mFlag')">Cancel</button><button class="btn btn-p" onclick="doFlag()">Submit Flag</button></div>
+</div></div>
+
+<div class="modal-bg" id="mAddSess"><div class="modal" style="max-width:540px">
+  <div class="modal-h"><span class="modal-title">Add Session</span><button class="modal-x" onclick="closeModal('mAddSess')">✕</button></div>
+  <div class="modal-b">
+    <div class="frow">
+      <div class="fg"><label class="fl">Session Date</label><input type="date" class="fi" id="sessDate"/></div>
+      <div class="fg"><label class="fl">Session Name *</label><input type="text" class="fi" id="sessName" placeholder="e.g. Practice #3"/></div>
+    </div>
+    <div class="fg"><label class="fl">Description (optional)</label><textarea class="fi fi-ta" id="sessDesc" style="min-height:50px"></textarea></div>
+    <div class="qfill"><label>Quick-fill all selected:</label><input type="number" id="qfHrs" value="1.5" min="0" max="24" step="0.5" oninput="applyQF()"/><span style="font-size:11px;color:var(--accent)">hrs each</span></div>
+    <div class="sc-list"><div class="sc-all"><input type="checkbox" id="scAll" onchange="toggleAll(this.checked)"/> Select / deselect all</div><div id="scRows"></div></div>
+  </div>
+  <div class="modal-f"><button class="btn btn-s" onclick="closeModal('mAddSess')">Cancel</button><button class="btn btn-p" onclick="doAddSess()">Save Session</button></div>
+</div></div>
+
+<div class="modal-bg" id="mAddMisc"><div class="modal" style="max-width:520px">
+  <div class="modal-h"><span class="modal-title">Give One-Time Hours</span><button class="modal-x" onclick="closeModal('mAddMisc')">✕</button></div>
+  <div class="modal-b">
+    <div class="fg"><label class="fl">Your Name</label><input type="text" class="fi" id="miscTeacherName" placeholder="e.g. Mr. Chen"/></div>
+    <div class="fg">
+      <label class="fl">Student *</label>
+      <div style="position:relative">
+        <input type="text" class="fi" id="miscStuSearch" placeholder="Search by name or ID…" oninput="miscStuDebounce()" autocomplete="off"/>
+        <div class="stu-results" id="miscStuResults"></div>
+      </div>
+      <div class="stu-selected" id="miscStuSel">
+        <div><strong id="miscStuName"></strong><div id="miscStuMeta" style="font-size:10px;color:var(--text3)"></div></div>
+        <button type="button" class="btn btn-s btn-sm" onclick="clearMiscStu()">Change</button>
+      </div>
+      <div class="fi-hint" style="margin-top:5px">Or type manually if student is not in roster:</div>
+      <div class="frow" id="miscManualRow" style="margin-top:5px">
+        <div><input type="text" class="fi" id="miscManualLast" placeholder="Last name"/></div>
+        <div><input type="text" class="fi" id="miscManualFirst" placeholder="First name"/></div>
+      </div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Task Name *</label><input type="text" class="fi" id="miscTask" placeholder="e.g. Set up auditorium"/></div>
+      <div class="fg"><label class="fl">Date *</label><input type="date" class="fi" id="miscDate"/></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Hours *</label><input type="number" class="fi" id="miscHours" value="1" min="0.5" max="24" step="0.5"/></div>
+      <div class="fg"><label class="fl">Description (optional)</label><input type="text" class="fi" id="miscDesc"/></div>
+    </div>
+  </div>
+  <div class="modal-f"><button class="btn btn-s" onclick="closeModal('mAddMisc')">Cancel</button><button class="btn btn-p" onclick="doAddMisc()">Save Hours</button></div>
+</div></div>
+
+<div class="modal-bg" id="mAddStu"><div class="modal" style="max-width:480px">
+  <div class="modal-h"><span class="modal-title">Add Student to Organization</span><button class="modal-x" onclick="closeModal('mAddStu')">✕</button></div>
+  <div class="modal-b">
+    <div class="fg">
+      <label class="fl">Search Student</label>
+      <div style="position:relative">
+        <input type="text" class="fi" id="addStuSearch" placeholder="Type name or ID…" oninput="addStuSearchDebounce()" autocomplete="off"/>
+        <div class="stu-results" id="addStuResults"></div>
+      </div>
+      <div class="stu-selected" id="addStuSel">
+        <div><strong id="addStuName"></strong><div id="addStuMeta" style="font-size:10px;color:var(--text3)"></div></div>
+        <button type="button" class="btn btn-s btn-sm" onclick="clearAddStu()">Change</button>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">Role (optional)</label><input type="text" class="fi" id="addStuRole" placeholder="e.g. Member, President"/></div>
+  </div>
+  <div class="modal-f"><button class="btn btn-s" onclick="closeModal('mAddStu')">Cancel</button><button class="btn btn-p" onclick="doAddStu()">Add to Organization</button></div>
+</div></div>
+
+<div class="modal-bg" id="mNewStu"><div class="modal">
+  <div class="modal-h"><span class="modal-title">Add New Student</span><button class="modal-x" onclick="closeModal('mNewStu')">✕</button></div>
+  <div class="modal-b">
+    <div class="info-box">Email auto-generated as <code>ID@dishs.tp.edu.tw</code>.</div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Student ID</label><input type="text" class="fi" id="nId" oninput="previewNewStu()"/><div class="fi-preview" id="nEmailPrev">Email: —</div></div>
+      <div class="fg"><label class="fl">Class</label><select class="fi" id="nClass"><option value="">Select…</option><option>G9RL</option><option>G9RP</option><option>G10A</option><option>G10P</option><option>G11A</option><option>G11L</option><option>G12V</option><option>G12P</option></select></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Last Name</label><input type="text" class="fi" id="nLast" oninput="this.value=this.value.toUpperCase()"/></div>
+      <div class="fg"><label class="fl">First Name</label><input type="text" class="fi" id="nFirst"/></div>
+    </div>
+    <div class="fg"><label class="fl">House</label><select class="fi" id="nHouse"><option value="">Select…</option><option>1-Truthful</option><option>2-Organized</option><option>3-Reflective</option><option>4-Courageous</option><option>5-Helpful</option></select></div>
+  </div>
+  <div class="modal-f"><button class="btn btn-s" onclick="closeModal('mNewStu')">Cancel</button><button class="btn btn-p" onclick="doNewStu()">Add Student</button></div>
+</div></div>
+
+<div class="modal-bg" id="mBulk"><div class="modal" style="max-width:540px">
+  <div class="modal-h"><span class="modal-title">Bulk Import Students</span><button class="modal-x" onclick="closeModal('mBulk')">✕</button></div>
+  <div class="modal-b">
+    <div class="info-box"><strong>Columns:</strong> Student ID | Last Name | First Name | Class | House</div>
+    <textarea class="import-area" id="bulkTxt" placeholder="Paste from Google Sheets here…"></textarea>
+    <div id="importResult" class="import-result" style="display:none"></div>
+  </div>
+  <div class="modal-f"><button class="btn btn-s" onclick="closeModal('mBulk')">Close</button><button class="btn btn-p" onclick="doBulk()">Import</button></div>
+</div></div>
+
+<div class="modal-bg" id="mNewOrg"><div class="modal">
+  <div class="modal-h"><span class="modal-title">New Organization</span><button class="modal-x" onclick="closeModal('mNewOrg')">✕</button></div>
+  <div class="modal-b">
+    <div class="fg"><label class="fl">Organization Name</label><input type="text" class="fi" id="newOrgName" placeholder="e.g. DIS Swim Team"/></div>
+  </div>
+  <div class="modal-f"><button class="btn btn-s" onclick="closeModal('mNewOrg')">Cancel</button><button class="btn btn-p" onclick="doNewOrg()">Create</button></div>
+</div></div>
+
+<div class="modal-bg" id="mNewSY"><div class="modal" style="max-width:540px">
+  <div class="modal-h"><span class="modal-title">Start New School Year</span><button class="modal-x" onclick="closeModal('mNewSY')">✕</button></div>
+  <div class="modal-b">
+    <div class="warn-box"><strong>Major action.</strong> Saves current year totals and starts fresh.</div>
+    <div class="fg"><label class="fl">New SY Code</label><input type="text" class="fi" id="nySY" placeholder="SY2027-28"/></div>
+    <div class="fg"><label class="fl">Carry over these organizations</label><div class="org-check-list" id="nyOrgList"></div></div>
+    <div class="fg"><label class="fl">Type CONFIRM to proceed</label><input type="text" class="fi fi-code" id="nyConf" placeholder="CONFIRM"/></div>
+  </div>
+  <div class="modal-f"><button class="btn btn-s" onclick="closeModal('mNewSY')">Cancel</button><button class="btn btn-d" onclick="doNewSY()">Start New Year</button></div>
+</div></div>
+
+<div class="modal-bg" id="mEditStu"><div class="modal">
+  <div class="modal-h"><span class="modal-title">Edit Student</span><button class="modal-x" onclick="closeModal('mEditStu')">✕</button></div>
+  <div class="modal-b">
+    <input type="hidden" id="editStuId"/>
+    <div class="frow">
+      <div class="fg"><label class="fl">Student ID</label><input type="text" class="fi" id="eId" oninput="updateEditEmailPreview()"/><div class="fi-hint" id="eEmailPrev" style="color:var(--text3);font-size:10px;margin-top:3px"></div></div>
+      <div class="fg"><label class="fl">Class</label><select class="fi" id="eClass"><option value="">Select…</option><option>G9RL</option><option>G9RP</option><option>G10A</option><option>G10P</option><option>G11A</option><option>G11L</option><option>G12V</option><option>G12P</option></select></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Last Name</label><input type="text" class="fi" id="eLast" oninput="this.value=this.value.toUpperCase()"/></div>
+      <div class="fg"><label class="fl">First Name</label><input type="text" class="fi" id="eFirst"/></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">House</label><select class="fi" id="eHouse"><option value="">Select…</option><option>1-Truthful</option><option>2-Organized</option><option>3-Reflective</option><option>4-Courageous</option><option>5-Helpful</option></select></div>
+      <div class="fg"><label class="fl">Status</label><select class="fi" id="eStatus"><option>Active</option><option>Inactive</option></select></div>
+    </div>
+  </div>
+  <div class="modal-f">
+    <button class="btn btn-d" style="margin-right:auto" onclick="doDeleteStu()">Delete Student</button>
+    <button class="btn btn-s" onclick="closeModal('mEditStu')">Cancel</button>
+    <button class="btn btn-p" onclick="doEditStu()">Save Changes</button>
+  </div>
+</div></div>
+
+<div class="modal-bg" id="mAddTeacher"><div class="modal" style="max-width:500px">
+  <div class="modal-h"><span class="modal-title">Add Teacher Access</span><button class="modal-x" onclick="closeModal('mAddTeacher')">✕</button></div>
+  <div class="modal-b">
+    <div class="info-box">Assign a teacher to one or more organizations. They can also give misc hours to any student.</div>
+    <div class="fg"><label class="fl">Teacher Email</label><input type="text" class="fi" id="atEmail" placeholder="teacher@dishs.tp.edu.tw"/></div>
+    <div class="fg"><label class="fl">Assign Organizations</label><div id="atOrgList" style="border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;max-height:190px;overflow-y:auto;background:var(--bg2)"></div></div>
+  </div>
+  <div class="modal-f"><button class="btn btn-s" onclick="closeModal('mAddTeacher')">Cancel</button><button class="btn btn-p" onclick="doAddTeacher()">Add Teacher</button></div>
+</div></div>
+
+<div class="modal-bg" id="mOffCampus"><div class="modal" style="max-width:540px">
+  <div class="modal-h"><span class="modal-title">Submit Off-Campus Hours</span><button class="modal-x" onclick="closeModal('mOffCampus')">✕</button></div>
+  <div class="modal-b">
+    <div class="fg"><label class="fl">Organization / Activity Name *</label><input type="text" class="fi" id="ocOrgName"/></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Date *</label><input type="date" class="fi" id="ocDate"/></div>
+      <div class="fg"><label class="fl">Hours *</label><input type="number" class="fi" id="ocHours" value="1" min="0.5" max="24" step="0.5"/></div>
+    </div>
+    <div class="fg"><label class="fl">Description *</label><textarea class="fi fi-ta" id="ocDesc"></textarea></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Supervisor Name *</label><input type="text" class="fi" id="ocSupName"/></div>
+      <div class="fg"><label class="fl">Supervisor Email *</label><input type="email" class="fi" id="ocSupEmail"/></div>
+    </div>
+  </div>
+  <div class="modal-f"><button class="btn btn-s" onclick="closeModal('mOffCampus')">Cancel</button><button class="btn btn-p" onclick="doSubmitOffCampus()">Submit</button></div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
