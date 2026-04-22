@@ -1,6 +1,20 @@
 // ============================================================
 // app.js — Frontend logic (ES module)
 // ============================================================
+import { supabase } from './supabase.js';
+import { signInWithGoogle, signOut, getUserRole } from './auth.js';
+import {
+  getActiveSY, getMasterRoster, addStudentToRoster, bulkImportStudents,
+  updateStudent, deleteStudentFromRoster, searchStudents,
+  getOrgList, createOrg, deleteOrg, renameOrg, getOrgEditorData,
+  addStudentToOrg, removeStudentFromOrg, updateMemberRole,
+  addSession, deleteSessionHours, deleteSession,
+  addMiscHours, getMiscHours, deleteMiscHours,
+  getStudentData, getAdminSummary, startNewSchoolYear,
+  submitFlag, getFlags, resolveFlag, deleteFlag,
+  submitOffCampus, getOffCampusPending, updateOffCampusStatus,
+  getSettings, saveSuperAdmins, saveOrgEditors, fmtDate,
+} from './db.js';
 console.log('app.js loaded');
 
 // ── STATE ─────────────────────────────────────────────────────
